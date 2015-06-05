@@ -51,9 +51,10 @@ export function generateId(node: Node|Element|DocumentFragment, tags: Object) {
  * will merge and return the diff as a list.
  * @param {Node|Element|DocumentFragment} source
  * @param {Node|Element|DocumentFragment} base
+ * @param {null|undefined|Number} index
  * @return {Array}
  */
-export function merge(source: Node|Element|DocumentFragment, base: Node|Element|DocumentFragment) {
+export function merge(source: Node|Element|DocumentFragment, base: Node|Element|DocumentFragment, index) {
     var diffActions = [];
     // if the source and base is either a text node or a comment node,
     // then we can simply say the difference is their text content
@@ -61,9 +62,10 @@ export function merge(source: Node|Element|DocumentFragment, base: Node|Element|
         (source.nodeType === 8 && base.nodeType === 8)) {
         if (base.nodeValue !== source.nodeValue) {
             diffActions.push({ 'action': 'replaceText',
-                               'node': base,
                                '_deleted': base.nodeValue,
-                               '_inserted': source.newValue});
+                               '_inserted': source.nodeValue,
+                               'baseIndex': index,
+                               'sourceIndex': index});
            base.nodeValue = source.nodeValue;
         }
 
@@ -85,12 +87,10 @@ export function merge(source: Node|Element|DocumentFragment, base: Node|Element|
             if (val !== value) {
                 if (val === null) {
                     diffActions.push({ 'action': 'setAttribute',
-                                       'node': base,
                                        'name': name,
                                        '_inserted': value});
                 } else {
                     diffActions.push({ 'action': 'setAttribute',
-                                       'node': base,
                                        'name': name,
                                        '_deleted': val,
                                        '_inserted': value});
@@ -105,7 +105,6 @@ export function merge(source: Node|Element|DocumentFragment, base: Node|Element|
             name = attributes[i].nodeName;
             if (source.getAttribute(name) === null) {
                 diffActions.push({ 'action': 'removeAttribute',
-                                   'node': base,
                                    'name': name,
                                    '_deleted': base.getAttribute(name)});
                 base.removeAttribute(name);
@@ -140,21 +139,27 @@ export function merge(source: Node|Element|DocumentFragment, base: Node|Element|
             if (existing) {
                 if (existing !== bound) {
                     diffActions.push({ 'action': 'moveChildElement',
-                                       'node': base,
-                                       'element': existing});
+                                       'element': existing,
+                                       'sourceIndex': i,
+                                       'baseIndex': indices[id],
+                                       'id': id});
                     base.insertBefore(existing, bound);
                 } else {
                     if (existing.isEqualNode(node)) {
                         diffActions.push({ 'action': 'equal',
-                                           'node': base,
-                                           'element': existing});
+                                           'element': existing,
+                                           'sourceIndex': i,
+                                           'baseIndex': indices[id],
+                                           'id': id});
                     }
                 }
             } else {
                 var inserted = node.cloneNode(true);
                 diffActions.push({ 'action': 'insertChildElement',
-                                   'node': base,
-                                   'element': inserted});
+                                   'element': inserted,
+                                   'sourceIndex': i,
+                                   'baseIndex': i,
+                                   'id': id});
                 base.insertBefore(inserted, bound);
             }
         }
@@ -163,8 +168,9 @@ export function merge(source: Node|Element|DocumentFragment, base: Node|Element|
         while (base.childNodes.length > source.childNodes.length) {
             var remove = base.childNodes[base.childNodes.length-1];
             diffActions.push({ 'action': 'removeChildElement',
-                               'node': base,
-                               'element': remove});
+                               'element': remove,
+                               'sourceIndex': null,
+                               'baseIndex': base.childNodes.length-1});
             base.removeChild(remove);
         }
     }
@@ -177,7 +183,7 @@ export function merge(source: Node|Element|DocumentFragment, base: Node|Element|
     // at this point we should have child nodes of equal length
     if (source.childNodes.length > 0) {
         for (var i = 0, len=source.childNodes.length; i<len; i++) {
-            var childDiffs = merge(source.childNodes[i], base.childNodes[i]);
+            var childDiffs = merge(source.childNodes[i], base.childNodes[i], i);
             if (childDiffs.length > 0) {
                 diffActions = diffActions.concat(childDiffs);
             }

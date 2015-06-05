@@ -46,7 +46,7 @@ describe('Merge Nodes', function() {
         var source = document.createElement('div');
         source.innerHTML = 'hello <b>world</b>. And something <strong>else</strong>';
         var theirs = document.createElement('div');
-        theirs.innerHTML = 'hello <i>austin</i>';
+        theirs.innerHTML = '<b>more content</b> hello <i>austin</i>';
         var theirMerge = reconcile.merge(theirs, base.cloneNode(true));
         var myMerge = reconcile.merge(source, base.cloneNode(true));
     });

@@ -1,0 +1,36 @@
+{
+  "name": "reconcile.js",
+  "version": "0.1.0",
+  "description": "Simple reconciliation, diff and merge for the DOM based on isomorphic.js and facebook's react algorithm",
+  "homepage": "https://github.com/nyxtom/reconcile.js",
+  "keywords": [
+    "virtual",
+    "dom",
+    "diff",
+    "patch",
+    "reconciliation",
+    "isomorphism"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/nyxtom/reconcile.js.git"
+  },
+  "author": "Thomas Holloway <nyxtom@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "test": "grunt test"
+  },
+  "devDependencies": {
+    "babel-plugin-typecheck": "0.0.3",
+    "babelify": "^6.1.2",
+    "browserify": "^10.2.3",
+    "gulp": "^3.9.0",
+    "jasmine-core": "^2.3.4",
+    "karma": "^0.12.36",
+    "karma-browserify": "^4.2.1",
+    "karma-chrome-launcher": "^0.1.12",
+    "karma-jasmine": "^0.3.5",
+    "karma-phantomjs-launcher": "^0.2.0",
+    "phantomjs": "^1.9.17"
+  }
+}

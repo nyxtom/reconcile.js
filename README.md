@@ -10,7 +10,7 @@ to perform two-way or three-way merges depending on the context.
 To install from npm, simply use the following command. Otherwise you can
 just clone the repo and use **reconcile.umd.js** or
 **reconcile.umd.min.js**. This library uses the [UMD (Universal Module
-Definition)[https://github.com/umdjs/umd] pattern for JavaScript modules.
+Definition)](https://github.com/umdjs/umd) pattern for JavaScript modules.
 
 ```
 npm install reconcile.js

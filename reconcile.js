@@ -1,3 +1,27 @@
+/**
+ * reconcile.js
+ * An implementation of the reconciliation algorithm presented by Facebook
+ * react.js (https://facebook.github.io/react/docs/reconciliation.html). This
+ * handles the diff between two nodes using the above algorithm. Additionally,
+ * this library will generate the diff actions, and allow you to perform
+ * a patch and applied changeset using a three-way merge option.
+ *
+ * The MIT License (MIT)
+ * Copyright (c) 2015 Thomas Holloway <nyxtom@gmail.com>
+ */
+
+/**
+ * @typedef {{
+ *    action: (string),
+ *    element: (null|undefined|Node|Element|DocumentFragment),
+ *    baseIndex: (null|undefined|string),
+ *    sourceIndex: (null|undefined|string),
+ *    _deleted: (null|undefined|string|number),
+ *    _inserted: (null|undefined|string|number),
+ *    name: (null|undefined|string|number)
+ * }}
+ */
+export class ChangeSet {}
 
 /**
  * Maps a list of nodes by their id or generated id.
@@ -49,7 +73,7 @@ export function generateId(node: Node|Element|DocumentFragment, tags: Object) {
  * @param {Node|Element|DocumentFragment} source
  * @param {Node|Element|DocumentFragment} base
  * @param {null|undefined|string} index
- * @return {Array}
+ * @return {Array<ChangeSet>}
  */
 export function diff(source: Node|Element|DocumentFragment, base: Node|Element|DocumentFragment, index) {
     var diffActions = [];
@@ -200,6 +224,10 @@ export function diff(source: Node|Element|DocumentFragment, base: Node|Element|D
  * Compares two changes and whether they are essentially performing the
  * same change. A change is qualified as the same if it performs the same
  * operation, at the same indices, inserting/deleting/moving or updating data.
+ *
+ * @param {ChangeSet} change1
+ * @param {ChangeSet} change2
+ * @return {boolean}
  */
 export function isEqualChange(change1, change2) {
     return change1['baseIndex'] === change2['baseIndex'] &&
@@ -216,6 +244,10 @@ export function isEqualChange(change1, change2) {
  * where one difference and two same patches will allow a patch to pass. If we
  * encounter a diff where the other doesn't have it at all (identified same node), then
  * that node will also get patched.
+ *
+ * @param {Array<ChangeSet>} theirs
+ * @param {Array<ChangeSet>} mine
+ * @return {Array<ChangeSet>}
  */
 export function patch(theirs, mine) {
     var conflicts = [];
@@ -239,10 +271,10 @@ export function patch(theirs, mine) {
                     changes.push(myItem);
                 } else {
                     // we have a conflict
-                    theirItem['conflict'] = true;
-                    theirItem['owner'] = 'theirs';
-                    myItem['conflict'] = true;
-                    myItem['owner'] = 'mine';
+                    theirItem['_conflict'] = true;
+                    theirItem['_owner'] = 'theirs';
+                    myItem['_conflict'] = true;
+                    myItem['_owner'] = 'mine';
                     conflicts.push(theirItem);
                     conflicts.push(myItem);
                 }
@@ -270,6 +302,12 @@ export function patch(theirs, mine) {
     return changes;
 }
 
+/**
+ * Sorts each change set item by their source index in the tree.
+ *
+ * @param {ChangeSet} a
+ * @param {ChangeSet} b
+ */
 export function sortChangeset(a, b) {
     if (a['sourceIndex'] === b['sourceIndex']) {
         return 0;
@@ -298,7 +336,20 @@ export function sortChangeset(a, b) {
     return 0;
 }
 
-export function apply(changes, base) {
+/**
+ * Applies a list of changes to the given base node. Conflicts are treated as
+ * inserted tags <theirs> vs <mine>. All removals are performed at the end of
+ * all operations, while moves/insertions are performed in order. Updates to
+ * text and attributes will be performed inline since this has no affect on the
+ * order of the tree. This function will locate all base nodes required for insertions,
+ * move and remove operations and applies them at the end of the function.
+ * Any nodes that were unable to be found will be considered unapplied.
+ *
+ * @param {Array<ChangeSet>} changes
+ * @param {Node|Element|DocumentFragment} base
+ * @return {{ unapplied: Array<ChangeSet>, conflicts: Array<{{ mine: ChangeSet, theirs: ChangeSet }}> }}
+ */
+export function apply(changes, base: Node|Element|DocumentFragment) {
     // a patch contains a list of changes to be made to a given element
     var unapplied = [];
     var moves = [];
@@ -385,8 +436,8 @@ export function apply(changes, base) {
             source = move[2],
             change = move[3];
 
-        if (change['conflict']) {
-            var conflictNode = document.createElement(change['owner']);
+        if (change['_conflict']) {
+            var conflictNode = document.createElement(change['_owner']);
             conflictNode.appendChild(insertion);
             conflictNodes.push(conflictNode);
             insertion = conflictNode;

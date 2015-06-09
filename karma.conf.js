@@ -11,7 +11,7 @@ module.exports = function(config) {
         // list of files / patterns to load in the browser
         files: [
             'reconcile.js',
-            'tests/**/*.js'
+            'test_reconcile.js'
         ],
 
         // list of files to exclude
@@ -22,7 +22,7 @@ module.exports = function(config) {
         // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
         preprocessors: {
             'reconcile.js': ['browserify'],
-            'tests/*.js': ['browserify']
+            'test_reconcile.js': ['browserify']
         },
 
         browserify: {

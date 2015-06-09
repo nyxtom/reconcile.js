@@ -3,7 +3,10 @@ Reconcile is a simple diff, patch and merge implementation that leverages
 the reconciliation concept algorithm presented from Facebook's React.js library.
 The goal of this library is to provide a very simple utility for performing diffs,
 patches and merges of html documents. The strategy is done such that you should be able
-to perform two-way or three-way merges depending on the context.
+to perform two-way or three-way merges depending on the context. Refer to
+Facebook React -
+[Reconciliation](https://facebook.github.io/react/docs/reconciliation.html)
+for a more in depth look at how this algorithm is meant to function.
 
 ### Installation
 

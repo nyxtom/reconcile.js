@@ -186,6 +186,7 @@ export function diff(source: Node|Element|DocumentFragment, base: Node|Element|D
         for (var i = 0, len=source.childNodes.length; i<len; i++) {
             var childDiffs = diff(source.childNodes[i], base.childNodes[i],
                 index + '>' + base.childNodes[i]._i);
+            delete base.childNodes[i]._i;
             if (childDiffs.length > 0) {
                 diffActions = diffActions.concat(childDiffs);
             }
@@ -195,6 +196,11 @@ export function diff(source: Node|Element|DocumentFragment, base: Node|Element|D
     return diffActions;
 }
 
+/**
+ * Compares two changes and whether they are essentially performing the
+ * same change. A change is qualified as the same if it performs the same
+ * operation, at the same indices, inserting/deleting/moving or updating data.
+ */
 export function isEqualChange(change1, change2) {
     return change1['baseIndex'] === change2['baseIndex'] &&
            change1['sourceIndex'] === change2['sourceIndex'] &&

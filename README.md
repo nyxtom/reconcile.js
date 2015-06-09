@@ -5,6 +5,17 @@ The goal of this library is to provide a very simple utility for performing diff
 patches and merges of html documents. The strategy is done such that you should be able
 to perform two-way or three-way merges depending on the context.
 
+### Installation
+
+To install from npm, simply use the following command. Otherwise you can
+just clone the repo and use **reconcile.umd.js** or
+**reconcile.umd.min.js**. This library uses the [UMD (Universal Module
+Definition)[https://github.com/umdjs/umd] pattern for JavaScript modules.
+
+```
+npm install reconcile.js
+```
+
 ### Diff Nodes
 Based on Facebook's Reconciliation algorithm, the approach for a O(n) diff and merge  
 algorithm is much preferred over traditional tree diff algorithms. Reconciliation will

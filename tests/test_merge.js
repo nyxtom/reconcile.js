@@ -70,4 +70,20 @@ describe('Merge Nodes', function() {
         expect(base.innerHTML).toEqual('<ul><ul><li>tester</li><li>asdf</li><ul><li>asdf</li><ul><ul><li><b>asdfasdf</b></li><li><b>inserted here</b></li><li><b>asdf</b></li></ul></ul></ul></ul></ul><div><br></div><div><br></div><div>and some more content <i>here!!!</i></div><div><br></div><ul><li>tester</li><li>asdf</li><ul><li>asdf</li><ul><li>asdfasdf</li><li>asdf</li></ul></ul></ul><div><br></div><div><br></div><div>fasdjflksadf</div><div>and <b>some more content here!!!</b><i>sadkfjaslkdjflsa</i></div><div><br></div><ul><ul><li>tester</li><li>asdf</li><ul><li>asdf</li><ul><li><b>asdfasdf</b></li><li>asdf</li></ul></ul></ul></ul><div><br></div><div><br></div><ul><ul><li>tester</li><li>asdf</li><ul><li>asdf</li><ul><li>asdfasdf</li><li>asdf</li></ul></ul></ul></ul>');
     });
 
+    it('should be able to perform move and replace text operationally', function() {
+        var base = document.createElement('div');
+        base.innerHTML = 'hello <b>world</b>';
+        var source = document.createElement('div');
+        source.innerHTML = 'hello <b>universe</b>';
+        var theirs = document.createElement('div');
+        theirs.innerHTML = '<b>world</b> hello <i>austin</i>';
+        var theirMerge = reconcile.diff(theirs, base.cloneNode(true));
+        var myMerge = reconcile.diff(source, base.cloneNode(true));
+        var changes = reconcile.patch(theirMerge, myMerge);
+        var result = reconcile.apply(changes, base);
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('<b>universe</b> hello <i>austin</i>');
+    });
+
 });

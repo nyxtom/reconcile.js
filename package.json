@@ -15,6 +15,7 @@
     "type": "git",
     "url": "git://github.com/nyxtom/reconcile.js.git"
   },
+  "main": "reconcile.umd.js",
   "author": "Thomas Holloway <nyxtom@gmail.com>",
   "license": "MIT",
   "scripts": {

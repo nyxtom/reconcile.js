@@ -16,7 +16,24 @@ to speed up the process while we are generating the diff itself. To generate a d
 the changes from source to target, use the following code:
 
 ```
-reconcile.merge(source, target);
+var changes = reconcile.diff(source, target);
+```
+
+### Patch Nodes
+If you wish to apply additional changes on top of an existing changeset. You can do
+this easily by creating a patch from your diff arguments. You should be careful to
+apply each changeset in the order you received your diffs. Each patch will perform
+a three-way merge changeset which can then be applied afterwords.
+
+```
+var theirs = reconcile.diff(theirSource, base);
+var mine = reconcile.diff(mySource, base);
+var changes = reconcile.patch(theirs, mine);
+var result = reconcile.apply(changes, base);
+// result.conflicts is an array of conflicts that may have been encountered
+// if you see this, your base node will have <theirs>, and <mine> next to
+// each other within the changeset, and conflicts will return an array
+// of conflicted nodes which you can choose what you will with them
 ```
 
 ### LICENCE

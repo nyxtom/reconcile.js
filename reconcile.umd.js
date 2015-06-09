@@ -23,17 +23,6 @@
      * Copyright (c) 2015 Thomas Holloway <nyxtom@gmail.com>
      */
 
-    /**
-     * @typedef {{
-     *    action: (string),
-     *    element: (null|undefined|Node|Element|DocumentFragment),
-     *    baseIndex: (null|undefined|string),
-     *    sourceIndex: (null|undefined|string),
-     *    _deleted: (null|undefined|string|number),
-     *    _inserted: (null|undefined|string|number),
-     *    name: (null|undefined|string|number)
-     * }}
-     */
     'use strict';
 
     exports.mapElements = mapElements;
@@ -45,6 +34,18 @@
     exports.apply = apply;
 
     function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
+
+    /**
+     * @typedef {{
+     *    action: (string),
+     *    element: (null|undefined|Node|Element|DocumentFragment),
+     *    baseIndex: (null|undefined|string),
+     *    sourceIndex: (null|undefined|string),
+     *    _deleted: (null|undefined|string|number),
+     *    _inserted: (null|undefined|string|number),
+     *    name: (null|undefined|string|number)
+     * }}
+     */
 
     var ChangeSet = function ChangeSet() {
         _classCallCheck(this, ChangeSet);

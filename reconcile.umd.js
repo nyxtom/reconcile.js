@@ -59,8 +59,6 @@
      */
 
     function mapElements(nodes) {
-        if (!(nodes instanceof NodeList)) throw new TypeError('Value of argument \'nodes\' violates contract.');
-
         var map = {};
         var tags = {};
         var node;
@@ -84,9 +82,6 @@
      */
 
     function generateId(node, tags) {
-        if (!(node instanceof Node) && !(node instanceof Element) && !(node instanceof DocumentFragment)) throw new TypeError('Value of argument \'node\' violates contract.');
-        if (typeof tags !== 'object') throw new TypeError('Value of argument \'tags\' violates contract.');
-
         // get the tag or create one from the other node types
         var tag = node.tagName ? node.tagName : 'x' + node.nodeType;
 
@@ -113,9 +108,6 @@
      */
 
     function diff(source, base, index) {
-        if (!(source instanceof Node) && !(source instanceof Element) && !(source instanceof DocumentFragment)) throw new TypeError('Value of argument \'source\' violates contract.');
-        if (!(base instanceof Node) && !(base instanceof Element) && !(base instanceof DocumentFragment)) throw new TypeError('Value of argument \'base\' violates contract.');
-
         var diffActions = [];
         if (source.isEqualNode(base)) {
             return diffActions;
@@ -388,8 +380,6 @@
      */
 
     function apply(changes, base) {
-        if (!(base instanceof Node) && !(base instanceof Element) && !(base instanceof DocumentFragment)) throw new TypeError('Value of argument \'base\' violates contract.');
-
         // a patch contains a list of changes to be made to a given element
         var unapplied = [];
         var moves = [];

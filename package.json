@@ -18,7 +18,7 @@
   "author": "Thomas Holloway <nyxtom@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "test": "grunt test"
+    "test": "karma start"
   },
   "devDependencies": {
     "babel-plugin-typecheck": "0.0.3",

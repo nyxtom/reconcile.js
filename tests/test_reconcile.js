@@ -1,4 +1,4 @@
-import * as reconcile from './reconcile.js';
+import * as reconcile from '../lib/reconcile.js';
 
 describe('Merge Nodes', function() {
 

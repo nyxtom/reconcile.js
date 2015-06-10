@@ -1,6 +1,6 @@
 {
   "name": "reconcile.js",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Simple reconciliation, diff and merge for the DOM based on isomorphic.js and facebook's react algorithm",
   "homepage": "https://github.com/nyxtom/reconcile.js",
   "keywords": [

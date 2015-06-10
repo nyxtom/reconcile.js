@@ -23,18 +23,6 @@
      * Copyright (c) 2015 Thomas Holloway <nyxtom@gmail.com>
      */
 
-    'use strict';
-
-    exports.mapElements = mapElements;
-    exports.generateId = generateId;
-    exports.diff = diff;
-    exports.isEqualChange = isEqualChange;
-    exports.patch = patch;
-    exports.sortChangeset = sortChangeset;
-    exports.apply = apply;
-
-    function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
     /**
      * @typedef {{
      *    action: (string),
@@ -46,6 +34,17 @@
      *    name: (null|undefined|string|number)
      * }}
      */
+    'use strict';
+
+    exports.mapElements = mapElements;
+    exports.generateId = generateId;
+    exports.diff = diff;
+    exports.isEqualChange = isEqualChange;
+    exports.patch = patch;
+    exports.sortChangeset = sortChangeset;
+    exports.apply = apply;
+
+    function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
 
     var ChangeSet = function ChangeSet() {
         _classCallCheck(this, ChangeSet);
@@ -64,14 +63,17 @@
         var tags = {};
         var node;
 
+        var indices = [];
         for (var i = 0, len = nodes.length; i < len; i++) {
             node = nodes[i];
             var id = node.id ? node.id : generateId(node, tags);
             map[id] = node;
-            node._i = i.toString();
+            node._i = i;
+            node._id = id;
+            indices.push(i);
         }
 
-        return map;
+        return { 'map': map, 'indices': indices };
     }
 
     /**
@@ -118,15 +120,15 @@
         }
         // if the source and base is either a text node or a comment node,
         // then we can simply say the difference is their text content
-        if (source.nodeType === 3 && base.nodeType === 3 || source.nodeType === 8 && base.nodeType === 8) {
+        if (source.nodeType === 3 && base.nodeType === 3) {
             if (base.nodeValue !== source.nodeValue) {
-                diffActions.push({ 'action': 'replaceText',
+                diffActions.push({
+                    'action': 'replaceText',
                     'element': base,
                     'baseIndex': index,
                     'sourceIndex': index,
                     '_deleted': base.nodeValue,
                     '_inserted': source.nodeValue });
-                base.nodeValue = source.nodeValue;
             }
 
             return diffActions;
@@ -146,14 +148,16 @@
                 var val = base.getAttribute(name);
                 if (val !== value) {
                     if (val === null) {
-                        diffActions.push({ 'action': 'setAttribute',
+                        diffActions.push({
+                            'action': 'setAttribute',
                             'name': name,
                             'element': base,
                             'baseIndex': index,
                             'sourceIndex': index,
                             '_inserted': value });
                     } else {
-                        diffActions.push({ 'action': 'setAttribute',
+                        diffActions.push({
+                            'action': 'setAttribute',
                             'name': name,
                             'element': base,
                             'baseIndex': index,
@@ -161,7 +165,6 @@
                             '_deleted': val,
                             '_inserted': value });
                     }
-                    base.setAttribute(name, value);
                 }
             }
 
@@ -170,12 +173,12 @@
             for (var i = 0, len = attributes.length; i < len; i++) {
                 name = attributes[i].nodeName;
                 if (source.getAttribute(name) === null) {
-                    diffActions.push({ 'action': 'removeAttribute',
+                    diffActions.push({
+                        'action': 'removeAttribute',
                         'name': name,
                         'baseIndex': index,
                         'sourceIndex': index,
                         '_deleted': base.getAttribute(name) });
-                    base.removeAttribute(name);
                 }
             }
         }
@@ -186,17 +189,27 @@
         }
 
         // insert, delete, and move child nodes based on a predictable id
+        var compare = [];
         if (source.childNodes && base.childNodes) {
-            var map = mapElements(base.childNodes),
+            var mapResult = mapElements(base.childNodes),
                 tags = {},
                 nodes = source.childNodes;
 
+            var map = mapResult['map'];
+            var indices = mapResult['indices'];
+
             // loop through each source node and get the relevant base node
             var moves = [];
+            var operateMap = {};
             for (var i = 0, len = nodes.length; i < len; i++) {
                 var node = nodes[i],
-                    bound = base.childNodes[i],
+                    bound = base.childNodes[indices[i]],
                     id = node.id ? node.id : generateId(node, tags);
+
+                // skip if we already performed an insertion map
+                if (operateMap[id]) {
+                    continue;
+                }
 
                 // check if the node has an id
                 // if it exists in the base map, then move that node to the correct
@@ -205,30 +218,40 @@
                 var existing = map[id];
                 if (existing) {
                     if (existing !== bound) {
-                        diffActions.push({ 'action': 'moveChildElement',
+                        diffActions.push({
+                            'action': 'moveChildElement',
                             'element': existing,
                             'baseIndex': index + '>' + existing._i,
                             'sourceIndex': index + '>' + i });
-                        base.insertBefore(existing, bound);
+
+                        // move the index so we can retrieve the next appropriate node
+                        indices.splice(i, 0, indices.splice(existing._i, 1)[0]);
+                    }
+                    if (!node.isEqualNode(existing)) {
+                        compare.push([node, existing]);
                     }
                 } else {
                     var inserted = node.cloneNode(true);
-                    diffActions.push({ 'action': 'insertChildElement',
+                    diffActions.push({
+                        'action': 'insertChildElement',
                         'element': inserted,
                         'baseIndex': index + '>' + i,
                         'sourceIndex': index + '>' + i });
-                    base.insertBefore(inserted, bound);
                 }
+                operateMap[id] = true;
             }
 
             // Remove any tail nodes in the base
-            while (base.childNodes.length > source.childNodes.length) {
-                var remove = base.childNodes[base.childNodes.length - 1];
-                diffActions.push({ 'action': 'removeChildElement',
-                    'element': remove,
-                    'baseIndex': index + '>' + remove._i,
-                    'sourceIndex': null });
-                base.removeChild(remove);
+            for (var i = 0, len = base.childNodes.length; i < len; i++) {
+                var remove = base.childNodes[i];
+                var removeId = remove._id;
+                if (!operateMap[removeId]) {
+                    diffActions.push({
+                        'action': 'removeChildElement',
+                        'element': remove,
+                        'baseIndex': index + '>' + remove._i,
+                        'sourceIndex': null });
+                }
             }
         }
 
@@ -238,13 +261,22 @@
         }
 
         // at this point we should have child nodes of equal length
-        if (source.childNodes.length > 0) {
-            for (var i = 0, len = source.childNodes.length; i < len; i++) {
-                var childDiffs = diff(source.childNodes[i], base.childNodes[i], index + '>' + base.childNodes[i]._i);
-                delete base.childNodes[i]._i;
+        if (compare.length > 0) {
+            for (var i = 0, len = compare.length; i < len; i++) {
+                var sourceChildNode = compare[i][0];
+                var baseChildNode = compare[i][1];
+
+                // perform the diff between the given source and base child nodes
+                var childDiffs = diff(sourceChildNode, baseChildNode, index + '>' + baseChildNode._i);
+
+                // if there was any difference, concat those to our existing actions
                 if (childDiffs.length > 0) {
                     diffActions = diffActions.concat(childDiffs);
                 }
+
+                // remove temporary data stored on the node
+                delete baseChildNode._i;
+                delete baseChildNode._id;
             }
         }
 

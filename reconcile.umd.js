@@ -36,8 +36,6 @@
      */
     'use strict';
 
-    exports.mapElements = mapElements;
-    exports.generateId = generateId;
     exports.diff = diff;
     exports.isEqualChange = isEqualChange;
     exports.patch = patch;
@@ -55,10 +53,10 @@
     /**
      * Maps a list of nodes by their id or generated id.
      * @param {NodeList} nodes
+     * @param {boolean} includeReverse
      * @return {Object}
      */
-
-    function mapElements(nodes) {
+    function mapElements(nodes, includeReverse) {
         var map = {};
         var tags = {};
         var node;
@@ -83,7 +81,6 @@
      * @param {Object} tags
      * @return {string}
      */
-
     function generateId(node, tags) {
         // get the tag or create one from the other node types
         var tag = node.tagName ? node.tagName : 'x' + node.nodeType;
@@ -98,6 +95,86 @@
 
         return tag + tags[tag];
     }
+
+    /**
+     * Generate moves creates a diff for a given map, nodes and base element
+     * to iterate over the elements in either forward or reverse order. This allows
+     * us to determine whether the reverse or in order diff creates more or less moves.
+     * Reducing the number of changes required for moves, insertions and deletions is
+     * important to reducing future conflicts.
+     *
+     * @param {Object} map
+     * @param {NodeList} nodes
+     * @param {Array<Number>} indices
+     * @param {Node|Element|DocumentFragment} base
+     * @param {boolean} reverse
+     * @param {null|undefined|string} index
+     * @return {Object}
+     */
+    function generateMoves(map, nodes, indices, base, reverse, index) {
+        var moves = [];
+        var compare = [];
+        var operateMap = {};
+        var tags = {};
+
+        // iterate over the nodes and base nodes in the given order
+        for (var i = 0, len = nodes.length; i < len; i++) {
+            var node = nodes[reverse ? nodes.length - i - 1 : i],
+                bound = base.childNodes[reverse ? base.childNodes.length - indices[i] - 1 : indices[i]],
+                id = node.id ? node.id : generateId(node, tags);
+
+            // skip if we already performed an insertion map
+            if (operateMap[id]) {
+                return;
+            }
+
+            // check if the node has an id
+            // if it exists in the base map, then move that node to the correct
+            // position, this will usually be the same node, which means no dom move
+            // is necessary, otherwise clone the node from the source (new inserts)
+            var existing = map[id];
+            if (existing) {
+                if (existing !== bound) {
+                    var relativeBaseIndex = reverse ? base.childNodes.length - existing._i - 1 : existing._i;
+                    moves.push({
+                        'action': 'moveChildElement',
+                        'element': existing,
+                        'baseIndex': index + '>' + relativeBaseIndex,
+                        'sourceIndex': index + '>' + i });
+
+                    // move the index so we can retrieve the next appropriate node
+                    indices.splice(i, 0, indices.splice(relativeBaseIndex, 1)[0]);
+                }
+                if (!node.isEqualNode(existing)) {
+                    compare.push([node, existing]);
+                }
+            } else {
+                var inserted = node.cloneNode(true);
+                var relativeBaseIndex = reverse ? nodes.length - i - 1 : i;
+                moves.push({
+                    'action': 'insertChildElement',
+                    'element': inserted,
+                    'baseIndex': index + '>' + relativeBaseIndex,
+                    'sourceIndex': index + '>' + relativeBaseIndex });
+            }
+            operateMap[id] = true;
+        }
+
+        // Remove any tail nodes in the base
+        for (var i = 0, len = base.childNodes.length; i < len; i++) {
+            var remove = base.childNodes[i];
+            var removeId = remove._id;
+            if (!operateMap[removeId]) {
+                moves.push({
+                    'action': 'removeChildElement',
+                    'element': remove,
+                    'baseIndex': index + '>' + remove._i,
+                    'sourceIndex': null });
+            }
+        }
+
+        return { 'compare': compare, 'diff': moves };
+    };
 
     /**
      * Merges two given nodes by checking their content
@@ -183,81 +260,24 @@
             }
         }
 
-        // return if the nodes are equal after attribute changes
-        if (source.isEqualNode(base)) {
-            return diffActions;
-        }
-
         // insert, delete, and move child nodes based on a predictable id
         var compare = [];
         if (source.childNodes && base.childNodes) {
-            var mapResult = mapElements(base.childNodes),
-                tags = {},
+            var mapResult = mapElements(base.childNodes, true),
                 nodes = source.childNodes;
 
             var map = mapResult['map'];
             var indices = mapResult['indices'];
 
-            // loop through each source node and get the relevant base node
-            var moves = [];
-            var operateMap = {};
-            for (var i = 0, len = nodes.length; i < len; i++) {
-                var node = nodes[i],
-                    bound = base.childNodes[indices[i]],
-                    id = node.id ? node.id : generateId(node, tags);
-
-                // skip if we already performed an insertion map
-                if (operateMap[id]) {
-                    continue;
-                }
-
-                // check if the node has an id
-                // if it exists in the base map, then move that node to the correct
-                // position, this will usually be the same node, which means no dom move
-                // is necessary, otherwise clone the node from the source (new inserts)
-                var existing = map[id];
-                if (existing) {
-                    if (existing !== bound) {
-                        diffActions.push({
-                            'action': 'moveChildElement',
-                            'element': existing,
-                            'baseIndex': index + '>' + existing._i,
-                            'sourceIndex': index + '>' + i });
-
-                        // move the index so we can retrieve the next appropriate node
-                        indices.splice(i, 0, indices.splice(existing._i, 1)[0]);
-                    }
-                    if (!node.isEqualNode(existing)) {
-                        compare.push([node, existing]);
-                    }
-                } else {
-                    var inserted = node.cloneNode(true);
-                    diffActions.push({
-                        'action': 'insertChildElement',
-                        'element': inserted,
-                        'baseIndex': index + '>' + i,
-                        'sourceIndex': index + '>' + i });
-                }
-                operateMap[id] = true;
-            }
-
-            // Remove any tail nodes in the base
-            for (var i = 0, len = base.childNodes.length; i < len; i++) {
-                var remove = base.childNodes[i];
-                var removeId = remove._id;
-                if (!operateMap[removeId]) {
-                    diffActions.push({
-                        'action': 'removeChildElement',
-                        'element': remove,
-                        'baseIndex': index + '>' + remove._i,
-                        'sourceIndex': null });
+            var moves = generateMoves(map, nodes, indices.slice(0), base, false, index);
+            if (moves['diff'].length > 1) {
+                var backwardMoves = generateMoves(map, nodes, indices.slice(0), base, true, index);
+                if (backwardMoves['diff'].length < moves['diff'].length) {
+                    moves = backwardMoves;
                 }
             }
-        }
-
-        // iterate through child nodes to determine whether any further changes need to be made
-        if (source.isEqualNode(base)) {
-            return diffActions;
+            diffActions = diffActions.concat(moves['diff']);
+            compare = moves['compare'];
         }
 
         // at this point we should have child nodes of equal length
@@ -476,7 +496,7 @@
                 }
             } else if (action === 'removeChildElement') {
                 removals.push([node.parentNode, node]);
-            } else if (!change['conflict']) {
+            } else if (!change['_conflict']) {
                 if (action === 'replaceText') {
                     node.nodeValue = change['_inserted'];
                 } else if (action === 'setAttribute') {
@@ -485,8 +505,10 @@
                     node.removeAttribute(change['name']);
                 }
             } else {
-                node['_conflict_' + change['owner']] = change['_inserted'];
-                conflictNodes.push(node);
+                node['_conflict_' + change['_owner']] = change['_inserted'];
+                if (conflictNodes.indexOf(node) < 0) {
+                    conflictNodes.push(node);
+                }
             }
         }
 

@@ -86,6 +86,22 @@ describe('Merge Nodes', function() {
         expect(base.innerHTML).toEqual('<b>universe</b> hello <i>austin</i>');
     });
 
+    it('should be able to resolve simple lists', function() {
+        var base = document.createElement('div');
+        base.innerHTML = 'one<b>two</b>';
+        var source = document.createElement('div');
+        source.innerHTML = '<b>three</b>one<b>two</b>';
+        var theirs = document.createElement('div');
+        theirs.innerHTML = 'one<b>four</b>';
+        var theirMerge = reconcile.diff(theirs, base.cloneNode(true));
+        var myMerge = reconcile.diff(source, base.cloneNode(true));
+        var changes = reconcile.patch(theirMerge, myMerge);
+        var result = reconcile.apply(changes, base);
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('<b>three</b>one<b>four</b>');
+    });
+
     it('should be able to detect conflicts on simple text nodes', function() {
         var base = document.createElement('div');
         base.innerHTML = 'hello world';

@@ -17,7 +17,7 @@
      * react.js (https://facebook.github.io/react/docs/reconciliation.html). This
      * handles the diff between two nodes using the above algorithm. Additionally,
      * this library will generate the diff actions, and allow you to perform
-     * a patch and applied changeset using a three-way merge option.
+     * a patch and applied Change using a three-way merge option.
      *
      * The MIT License (MIT)
      * Copyright (c) 2015 Thomas Holloway <nyxtom@gmail.com>
@@ -32,30 +32,42 @@
      *    _deleted: (null|undefined|string|number),
      *    _inserted: (null|undefined|string|number),
      *    name: (null|undefined|string|number)
-     * }}
+     * }} Change
+     *
+     * @typedef {{
+     *    map: Object,
+     *    indices: Array<number>
+     * }} MapElementsResult
+     *
+     * @typedef {{
+     *    compare: Array<Array<Node|Element|DocumentFragment>>,
+     *    diff: Array<Change>
+     * }} MoveComparisonResult
+     *
+     * @typedef {{
+     *    mine: Change,
+     *    theirs: Change
+     * }} ChangeConflict
+     *
+     * @typedef {{
+     *    unapplied: Array<Change>,
+     *    conflicts: Array<ChangeConflict>
+     * }} ApplyResult
+     */
+
+    /**
+     * Maps a list of nodes by their id or generated id.
+     * @param {NodeList} nodes
+     * @param {boolean} includeReverse
+     * @return {MapElementsResult}
      */
     'use strict';
 
     exports.diff = diff;
     exports.isEqualChange = isEqualChange;
     exports.patch = patch;
-    exports.sortChangeset = sortChangeset;
+    exports.sortChange = sortChange;
     exports.apply = apply;
-
-    function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError('Cannot call a class as a function'); } }
-
-    var ChangeSet = function ChangeSet() {
-        _classCallCheck(this, ChangeSet);
-    };
-
-    exports.ChangeSet = ChangeSet;
-
-    /**
-     * Maps a list of nodes by their id or generated id.
-     * @param {NodeList} nodes
-     * @param {boolean} includeReverse
-     * @return {Object}
-     */
     function mapElements(nodes, includeReverse) {
         var map = {};
         var tags = {};
@@ -103,13 +115,13 @@
      * Reducing the number of changes required for moves, insertions and deletions is
      * important to reducing future conflicts.
      *
-     * @param {Object} map
+     * @param {MapElementsResult} map
      * @param {NodeList} nodes
      * @param {Array<Number>} indices
      * @param {Node|Element|DocumentFragment} base
      * @param {boolean} reverse
      * @param {null|undefined|string} index
-     * @return {Object}
+     * @return {MoveComparisonResult}
      */
     function generateMoves(map, nodes, indices, base, reverse, index) {
         var moves = [];
@@ -184,20 +196,17 @@
      * @param {Node|Element|DocumentFragment} source
      * @param {Node|Element|DocumentFragment} base
      * @param {null|undefined|string} index
-     * @return {Array<ChangeSet>}
+     * @return {Array<Change>}
      */
 
     function diff(source, base, index) {
         var diffActions = [];
-        if (source.isEqualNode(base)) {
-            return diffActions;
-        }
-        if (typeof index === 'undefined') {
+        if (index == null) {
             index = '0'; // 0 for root node
         }
         // if the source and base is either a text node or a comment node,
         // then we can simply say the difference is their text content
-        if (source.nodeType === 3 && base.nodeType === 3) {
+        if (source.nodeType === base.nodeType && (source.nodeType === 3 || source.nodeType === 8)) {
             if (base.nodeValue !== source.nodeValue) {
                 diffActions.push({
                     'action': 'replaceText',
@@ -218,13 +227,13 @@
                 name;
 
             // iterate over the source attributes that we want to copy over to the new base node
-            for (var i = 0, len = attributes.length; i < len; i++) {
+            for (var i = attributes.length; i--;) {
                 value = attributes[i].nodeValue;
                 name = attributes[i].nodeName;
 
                 var val = base.getAttribute(name);
                 if (val !== value) {
-                    if (val === null) {
+                    if (val == null) {
                         diffActions.push({
                             'action': 'setAttribute',
                             'name': name,
@@ -247,7 +256,7 @@
 
             // iterate over attributes to remove that the source no longer has
             attributes = base.attributes;
-            for (var i = 0, len = attributes.length; i < len; i++) {
+            for (var i = attributes.length; i--;) {
                 name = attributes[i].nodeName;
                 if (source.getAttribute(name) === null) {
                     diffActions.push({
@@ -255,7 +264,7 @@
                         'name': name,
                         'baseIndex': index,
                         'sourceIndex': index,
-                        '_deleted': base.getAttribute(name) });
+                        '_deleted': attributes[i].nodeValue });
                 }
             }
         }
@@ -308,8 +317,8 @@
      * same change. A change is qualified as the same if it performs the same
      * operation, at the same indices, inserting/deleting/moving or updating data.
      *
-     * @param {ChangeSet} change1
-     * @param {ChangeSet} change2
+     * @param {Change} change1
+     * @param {Change} change2
      * @return {boolean}
      */
 
@@ -323,9 +332,9 @@
      * encounter a diff where the other doesn't have it at all (identified same node), then
      * that node will also get patched.
      *
-     * @param {Array<ChangeSet>} theirs
-     * @param {Array<ChangeSet>} mine
-     * @return {Array<ChangeSet>}
+     * @param {Array<Change>} theirs
+     * @param {Array<Change>} mine
+     * @return {Array<Change>}
      */
 
     function patch(theirs, mine) {
@@ -346,9 +355,9 @@
                 // a conflict exists when both are applying changes
                 if (theirItem['baseIndex'] === myItem['baseIndex']) {
                     if (isEqualChange(theirItem, myItem)) {
-                        // one of the changesets is applying something, while
+                        // one of the Changes is applying something, while
                         // the other is set to equal (no changes)
-                        // apply the non-changeset
+                        // apply the non-Change
                         changes.push(myItem);
                     } else {
                         // we have a conflict
@@ -379,18 +388,18 @@
             changes = changes.concat(conflicts);
         }
 
-        changes.sort(sortChangeset);
+        changes.sort(sortChange);
         return changes;
     }
 
     /**
      * Sorts each change set item by their source index in the tree.
      *
-     * @param {ChangeSet} a
-     * @param {ChangeSet} b
+     * @param {Change} a
+     * @param {Change} b
      */
 
-    function sortChangeset(a, b) {
+    function sortChange(a, b) {
         if (a['sourceIndex'] === b['sourceIndex']) {
             return 0;
         } else if (!a['sourceIndex'] && b['sourceIndex']) {
@@ -427,9 +436,9 @@
      * move and remove operations and applies them at the end of the function.
      * Any nodes that were unable to be found will be considered unapplied.
      *
-     * @param {Array<ChangeSet>} changes
+     * @param {Array<Change>} changes
      * @param {Node|Element|DocumentFragment} base
-     * @return {{ unapplied: Array<ChangeSet>, conflicts: Array<{{ mine: ChangeSet, theirs: ChangeSet }}> }}
+     * @return {ApplyResult}
      */
 
     function apply(changes, base) {
@@ -512,9 +521,9 @@
             }
         }
 
-        // perform the moves/insertions last by first sorting the changeset
+        // perform the moves/insertions last by first sorting the Change
         moves.sort(function (a, b) {
-            return sortChangeset(a[3], b[3]);
+            return sortChange(a[3], b[3]);
         });
         for (var i = 0, len = moves.length; i < len; i++) {
             var move = moves[i];

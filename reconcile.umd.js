@@ -57,12 +57,6 @@
 
     'use strict';
 
-    exports.diff = diff;
-    exports.patch = patch;
-    exports.apply = apply;
-    exports.isEqualChange = isEqualChange;
-    exports.sortChange = sortChange;
-
     /**
      * Maps a list of nodes by their id or generated id.
      * @param {NodeList} nodes
@@ -546,5 +540,11 @@
 
         return { 'unapplied': unapplied, 'conflicts': conflictNodes };
     }
+
+    exports.diff = diff;
+    exports.patch = patch;
+    exports.apply = apply;
+    exports.isEqualChange = isEqualChange;
+    exports.sortChange = sortChange;
 });
 

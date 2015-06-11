@@ -125,7 +125,7 @@
 
             // skip if we already performed an insertion map
             if (operateMap[id]) {
-                return;
+                continue;
             }
 
             // check if the node has an id

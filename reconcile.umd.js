@@ -55,20 +55,20 @@
      * }} ApplyResult
      */
 
-    /**
-     * Maps a list of nodes by their id or generated id.
-     * @param {NodeList} nodes
-     * @param {boolean} includeReverse
-     * @return {MapElementsResult}
-     */
     'use strict';
 
     exports.diff = diff;
-    exports.isEqualChange = isEqualChange;
     exports.patch = patch;
-    exports.sortChange = sortChange;
     exports.apply = apply;
-    function mapElements(nodes, includeReverse) {
+    exports.isEqualChange = isEqualChange;
+    exports.sortChange = sortChange;
+
+    /**
+     * Maps a list of nodes by their id or generated id.
+     * @param {NodeList} nodes
+     * @return {MapElementsResult}
+     */
+    function mapElements(nodes) {
         var map = {};
         var tags = {};
         var node;
@@ -198,7 +198,6 @@
      * @param {null|undefined|string} index
      * @return {Array<Change>}
      */
-
     function diff(source, base, index) {
         var diffActions = [];
         if (index == null) {
@@ -272,7 +271,7 @@
         // insert, delete, and move child nodes based on a predictable id
         var compare = [];
         if (source.childNodes && base.childNodes) {
-            var mapResult = mapElements(base.childNodes, true),
+            var mapResult = mapElements(base.childNodes),
                 nodes = source.childNodes;
 
             var map = mapResult['map'];
@@ -321,7 +320,6 @@
      * @param {Change} change2
      * @return {boolean}
      */
-
     function isEqualChange(change1, change2) {
         return change1['baseIndex'] === change2['baseIndex'] && change1['sourceIndex'] === change2['sourceIndex'] && change1['action'] === change2['action'] && change1['name'] === change2['name'] && change1['_deleted'] === change2['_deleted'] && change1['_inserted'] === change2['_inserted'] && change1['element'].isEqualNode(change2['element']);
     }
@@ -336,7 +334,6 @@
      * @param {Array<Change>} mine
      * @return {Array<Change>}
      */
-
     function patch(theirs, mine) {
         var conflicts = [];
         var changes = [];
@@ -397,8 +394,8 @@
      *
      * @param {Change} a
      * @param {Change} b
+     * @return {number}
      */
-
     function sortChange(a, b) {
         if (a['sourceIndex'] === b['sourceIndex']) {
             return 0;
@@ -440,7 +437,6 @@
      * @param {Node|Element|DocumentFragment} base
      * @return {ApplyResult}
      */
-
     function apply(changes, base) {
         // a patch contains a list of changes to be made to a given element
         var unapplied = [];

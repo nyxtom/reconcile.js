@@ -50,8 +50,92 @@ describe('Merge Nodes', function() {
         var changes = reconcile.patch(theirMerge, myMerge);
         var result = reconcile.apply(changes, base);
         expect(result.unapplied).toEqual([]);
-        expect(result.conflicts.length).toEqual(2);
-        expect(base.innerHTML).toEqual('<b>more content</b> hello <theirs><i>austin</i></theirs><mine>. And something </mine><strong>else</strong>');
+        expect(result.conflicts.length).toEqual(1);
+        expect(base.innerHTML).toEqual('<b>more content</b> hello <strong>else</strong>');
+        result = reconcile.resolve(result.conflicts[0], base, 'theirs');
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('<b>more content</b> hello <i>austin</i><strong>else</strong>');
+    });
+
+    it('should be able to resolve three way conflicts with parent removal - mine', function() {
+        var base = document.createElement('div');
+        base.innerHTML = 'hello <b>world</b>';
+        var source = document.createElement('div');
+        source.innerHTML = 'hello <b>bleh</b>';
+        var theirs = document.createElement('div');
+        theirs.innerHTML = 'hello ';
+        var theirMerge = reconcile.diff(theirs, base);
+        var myMerge = reconcile.diff(source, base);
+        var changes = reconcile.patch(theirMerge, myMerge);
+        var result = reconcile.apply(changes, base);
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(1);
+        expect(base.innerHTML).toEqual('hello <b>world</b>');
+        result = reconcile.resolve(result.conflicts[0], base, 'mine');
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('hello <b>bleh</b>');
+    });
+
+    it('should be able to resolve three way conflicts with parent removal - theirs', function() {
+        var base = document.createElement('div');
+        base.innerHTML = 'hello <b>world</b>';
+        var source = document.createElement('div');
+        source.innerHTML = 'hello <b>bleh</b>';
+        var theirs = document.createElement('div');
+        theirs.innerHTML = 'hello ';
+        var theirMerge = reconcile.diff(theirs, base);
+        var myMerge = reconcile.diff(source, base);
+        var changes = reconcile.patch(theirMerge, myMerge);
+        var result = reconcile.apply(changes, base);
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(1);
+        expect(base.innerHTML).toEqual('hello <b>world</b>');
+        result = reconcile.resolve(result.conflicts[0], base, 'theirs');
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('hello ');
+    });
+
+    it('should be able to resolve three way conflicts with simple text changes - theirs', function() {
+        var base = document.createElement('div');
+        base.innerHTML = 'hello <b>world</b>';
+        var source = document.createElement('div');
+        source.innerHTML = 'hello <b>bleh</b>';
+        var theirs = document.createElement('div');
+        theirs.innerHTML = 'hello <b>content</b>';
+        var theirMerge = reconcile.diff(theirs, base);
+        var myMerge = reconcile.diff(source, base);
+        var changes = reconcile.patch(theirMerge, myMerge);
+        var result = reconcile.apply(changes, base);
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(1);
+        expect(base.innerHTML).toEqual('hello <b>world</b>');
+        result = reconcile.resolve(result.conflicts[0], base, 'theirs');
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('hello <b>content</b>');
+    });
+
+    it('should be able to resolve three way conflicts with simple text changes - mine', function() {
+        var base = document.createElement('div');
+        base.innerHTML = 'hello <b>world</b>';
+        var source = document.createElement('div');
+        source.innerHTML = 'hello <b>bleh</b>';
+        var theirs = document.createElement('div');
+        theirs.innerHTML = 'hello <b>content</b>';
+        var theirMerge = reconcile.diff(theirs, base);
+        var myMerge = reconcile.diff(source, base);
+        var changes = reconcile.patch(theirMerge, myMerge);
+        var result = reconcile.apply(changes, base);
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(1);
+        expect(base.innerHTML).toEqual('hello <b>world</b>');
+        result = reconcile.resolve(result.conflicts[0], base, 'mine');
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('hello <b>bleh</b>');
     });
 
     it('should be able to resolve more complex three way merges', function() {

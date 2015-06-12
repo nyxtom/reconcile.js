@@ -17,11 +17,12 @@ for a more in depth look at how this algorithm is meant to function.
   - **moveChildElement**, **insertChildElement**, **removeChildElement**
 - three-way merging between two diff changesets with automatic conflict resolution
 - forward/reverse diff checks on move/insert/remove to generate reduced changeset
+- Removing a parent element and a change to a subtree of a parent generates conflicts
+- Manual conflict resolution with theirs/mine ala **reconcile.resolve**
 
 ### TODO/Issues
 
 - Handle style values or any custom attributes with care for key/value updates (avoid bulk replaces)
-- Removing a parent element and a change to a subtree of a parent should generate a conflict
 - Generate text-diff for textnodes to reduce conflicts and create more minimal changes
 - Create Demo Diff Viewer
 
@@ -56,8 +57,8 @@ This should give you a list of changes which you can then apply to the target wi
 reconcile.apply(changes, target);
 ```
 
-**diff** will use a forward and backward run on the move/insertion/remove operations 
-in order to generate the smallest possible changeset. This should help reduce the possible 
+**diff** will use a forward and backward run on the move/insertion/remove operations
+in order to generate the smallest possible changeset. This should help reduce the possible
 conflicts that may occur as you encounter three-way merges for multiple patches below.
 
 ### Patch Nodes
@@ -71,10 +72,12 @@ var theirs = reconcile.diff(theirSource, base);
 var mine = reconcile.diff(mySource, base);
 var changes = reconcile.patch(theirs, mine);
 var result = reconcile.apply(changes, base);
-// result.conflicts is an array of conflicts that may have been encountered
-// if you see this, your base node will have <theirs>, and <mine> next to
-// each other within the changeset, and conflicts will return an array
-// of conflicted nodes which you can choose what you will with them
+
+// if you encounter a conflict, you can resolve it below
+for (let conflict of conflicts) {
+    reconcile.resolve(conflict, base, 'mine');
+}
+
 ```
 
 ### LICENCE

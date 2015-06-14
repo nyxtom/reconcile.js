@@ -1,6 +1,6 @@
 # Reconcile.js  [![Build Status](https://secure.travis-ci.org/nyxtom/reconcile.js.png?branch=master)](https://travis-ci.org/nyxtom/reconcile.js)
-Reconcile is a simple diff, patch and merge implementation that leverages
-the reconciliation concept algorithm presented from Facebook's React.js library.
+Reconcile is a simple diff, patch and merge implementation inspired by Facebook's React.js 
+approach to virtualizing the dom and performing updates through reconciliation.
 The goal of this library is to provide a very simple utility for performing diffs,
 patches and merges of html documents. The strategy is done such that you should be able
 to perform two-way or three-way merges depending on the context. Refer to

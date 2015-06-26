@@ -19,7 +19,7 @@ for a more in depth look at how this algorithm is meant to function.
 - forward/reverse diff checks on move/insert/remove to generate reduced changeset
 - Removing a parent element and a change to a subtree of a parent generates conflicts
 - Manual conflict resolution with theirs/mine ala **reconcile.resolve**
-- Option to show changes inline with **<ins>** and **<del>**
+- Option to show changes inline with **&lt;ins&gt;** and **&lt;del&gt;**
 
 ### TODO/Issues
 

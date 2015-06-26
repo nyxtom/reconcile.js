@@ -53,13 +53,21 @@
      *    unapplied: Array<Change>,
      *    conflicts: Array<ChangeConflict>
      * }} ApplyResult
-     /**
+     *
      * @typedef {{
      *     lastParent: (null|undefined|Node|Element|DocumentFragment),
      *     lastParentIndex: (null|undefined|string),
      *     node: (null|undefined|Node|Element|DocumentFragment),
      *     found: (boolean)
      * }} FindNodeAtIndexResult
+     *
+     * @typedef {{
+     *     parent: (Node|Element|DocumentFragment),
+     *     insertion: (Node|Element|DocumentFragment),
+     *     source: (null|undefined|Node|Element|DocumentFragment),
+     *     change: Change,
+     *     appendOnly: (boolean)
+     * }} AppliedMoveAction
      */
 
     'use strict';
@@ -513,9 +521,10 @@
      * @param {Array<Change>} changes
      * @param {Node|Element|DocumentFragment} base
      * @param {?boolean} force
+     * @param {?boolean} showChanges
      * @return {ApplyResult}
      */
-    function apply(changes, base, force) {
+    function apply(changes, base, force, showChanges) {
         // a patch contains a list of changes to be made to a given element
         var unapplied = [];
         var moves = [];
@@ -557,7 +566,19 @@
                 // do so now, for the given changset to be applied
                 if (action === 'insertChildElement') {
                     var lastParent = findBaseChildResult['lastParent'];
-                    moves.push([lastParent, change['element'], null, change]);
+                    var insertion = change['element'];
+                    if (showChanges) {
+                        var insNode = document.createElement('ins');
+                        ins.appendChild(insertion);
+                        insertion = ins;
+                    }
+                    moves.push({
+                        'parent': lastParent,
+                        'insertion': insertion,
+                        'source': null,
+                        'change': change,
+                        'appendOnly': false
+                    });
                 } else {
                     unapplied.push(change);
                 }
@@ -583,14 +604,65 @@
 
                 // a move that is prior to a given source element
                 if (action === 'moveChildElement') {
-                    moves.push([node.parentNode, node, sourceNode, change]);
+                    moves.push({
+                        'parent': node.parentNode,
+                        'insertion': node,
+                        'source': sourceNode,
+                        'change': change,
+                        'appendOnly': false
+                    });
                 } else {
-                    moves.push([node.parentNode, change['element'], sourceNode, change]);
+                    var insertion = change['element'];
+                    if (showChanges) {
+                        var insNode = document.createElement('ins');
+                        insNode.appendChild(insertion);
+                        insertion = insNode;
+                    }
+                    moves.push({
+                        'parent': node.parentNode,
+                        'insertion': insertion,
+                        'source': sourceNode,
+                        'change': change,
+                        'appendOnly': false
+                    });
                 }
             } else if (action === 'removeChildElement') {
+                if (showChanges) {
+                    var delNode = document.createElement('del');
+                    delNode.appendChild(node.cloneNode(true));
+                    moves.push({
+                        'parent': node.parentNode,
+                        'insertion': delNode,
+                        'source': null,
+                        'change': change,
+                        'appendOnly': true
+                    });
+                }
                 removals.push([node.parentNode, node]);
             } else if (action === 'replaceText') {
-                node.nodeValue = change['_inserted'];
+                if (!showChanges) {
+                    node.nodeValue = change['_inserted'];
+                } else {
+                    var deletionNode = document.createElement('del');
+                    deletionNode.appendChild(document.createTextNode(change['_deleted']));
+                    var insertionNode = document.createElement('ins');
+                    insertionNode.appendChild(document.createTextNode(change['_inserted']));
+                    moves.push({
+                        'parent': node.parentNode,
+                        'insertion': deletionNode,
+                        'source': node,
+                        'change': change,
+                        'appendOnly': false
+                    });
+                    moves.push({
+                        'parent': node.parentNode,
+                        'insertion': insertionNode,
+                        'source': node,
+                        'change': change,
+                        'appendOnly': false
+                    });
+                    node.nodeValue = '';
+                }
             } else if (action === 'setAttribute') {
                 node.setAttribute(change['name'], change['_inserted']);
             } else if (action === 'removeAttribute') {
@@ -600,20 +672,21 @@
 
         // perform the moves/insertions last by first sorting the changeset
         moves.sort(function (a, b) {
-            return sortChange(a[3], b[3]);
+            return sortChange(a['change'], b['change']);
         });
         for (var i = 0, len = moves.length; i < len; i++) {
             var move = moves[i];
-            var parent = move[0],
-                insertion = move[1],
-                source = move[2],
-                change = move[3];
+            var parent = move['parent'],
+                insertion = move['insertion'],
+                source = move['source'],
+                change = move['change'],
+                appendOnly = move['appendOnly'];
 
             // if this was an append, then find out the approximate index it should be at
             // based on the relative index of the change itself, if this is still
             // null, then just append the item altogether, typically this will
             // only matter when we are forcing the insertion to happen on conflict resolve
-            if (source === null && force) {
+            if (source === null && !appendOnly) {
                 var sourceIndex = change['sourceIndex'];
                 if (sourceIndex) {
                     var lastIndexStr = sourceIndex.substr(sourceIndex.lastIndexOf('>') + 1, sourceIndex.length);

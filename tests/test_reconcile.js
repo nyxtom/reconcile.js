@@ -19,9 +19,11 @@ describe('Merge Nodes', function() {
         source.innerHTML = 'hello world';
         var result = reconcile.diff(source, base);
         expect(!source.isEqualNode(base)).toBeTruthy();
-        expect(result.length).toEqual(1);
-        expect(result[0]['action']).toEqual('replaceText');
-        expect(result[0]['_deleted']).toEqual('hello there');
+        expect(result.length).toEqual(2);
+        expect(result[0]['action']).toEqual('deleteText');
+        expect(result[0]['_deleted']).toEqual('there');
+        expect(result[1]['action']).toEqual('insertText');
+        expect(result[1]['_inserted']).toEqual('world');
     });
 
     it('should return a new child diff', function() {
@@ -111,7 +113,7 @@ describe('Merge Nodes', function() {
         var result = reconcile.apply(changes, base);
         expect(result.unapplied).toEqual([]);
         expect(result.conflicts.length).toEqual(1);
-        expect(base.innerHTML).toEqual('hello <b>world</b>');
+        expect(base.innerHTML).toEqual('hello <b></b>');
         result = reconcile.resolve(result.conflicts[0], base, 'theirs');
         expect(result.unapplied).toEqual([]);
         expect(result.conflicts.length).toEqual(0);
@@ -131,7 +133,7 @@ describe('Merge Nodes', function() {
         var result = reconcile.apply(changes, base);
         expect(result.unapplied).toEqual([]);
         expect(result.conflicts.length).toEqual(1);
-        expect(base.innerHTML).toEqual('hello <b>world</b>');
+        expect(base.innerHTML).toEqual('hello <b></b>');
         result = reconcile.resolve(result.conflicts[0], base, 'mine');
         expect(result.unapplied).toEqual([]);
         expect(result.conflicts.length).toEqual(0);
@@ -186,7 +188,7 @@ describe('Merge Nodes', function() {
         expect(base.innerHTML).toEqual('<b>three</b>one<b>four</b>');
     });
 
-    it('should be able to detect conflicts on simple text nodes', function() {
+    it('should be able to detect conflicts and resolve to mine on simple text nodes', function() {
         var base = document.createElement('div');
         base.innerHTML = 'hello world';
         var source = document.createElement('div');
@@ -199,7 +201,31 @@ describe('Merge Nodes', function() {
         var result = reconcile.apply(changes, base);
         expect(result.unapplied).toEqual([]);
         expect(result.conflicts.length).toEqual(1);
-        expect(base.innerHTML).toEqual('hello world');
+        expect(base.innerHTML).toEqual('hello ');
+        result = reconcile.resolve(result.conflicts[0], base, 'mine');
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('hello universe');
+    });
+
+    it('should be able to detect conflicts and resolve to theirs on simple text nodes', function() {
+        var base = document.createElement('div');
+        base.innerHTML = 'hello world';
+        var source = document.createElement('div');
+        source.innerHTML = 'hello universe';
+        var theirs = document.createElement('div');
+        theirs.innerHTML = 'hello evernote';
+        var theirMerge = reconcile.diff(theirs, base);
+        var myMerge = reconcile.diff(source, base);
+        var changes = reconcile.patch(theirMerge, myMerge);
+        var result = reconcile.apply(changes, base);
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(1);
+        expect(base.innerHTML).toEqual('hello ');
+        result = reconcile.resolve(result.conflicts[0], base, 'theirs');
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('hello evernote');
     });
 
     it('should be able merge move and replace text', function() {

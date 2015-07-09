@@ -13,18 +13,18 @@ for a more in depth look at how this algorithm is meant to function.
 - non-destructive diff between two HTML DOM Element Trees
 - diff operations supported:
   - **removeAttribute**, **setAttribute**
-  - **replaceText**
+  - **insertText**, **deleteText**
   - **moveChildElement**, **insertChildElement**, **removeChildElement**
 - three-way merging between two diff changesets with automatic conflict resolution
 - forward/reverse diff checks on move/insert/remove to generate reduced changeset
 - Removing a parent element and a change to a subtree of a parent generates conflicts
 - Manual conflict resolution with theirs/mine ala **reconcile.resolve**
 - Option to show changes inline with **&lt;ins&gt;** and **&lt;del&gt;**
+- text diff implementation based on jsdiff (from John Resig)
 
 ### TODO/Issues
 
 - Handle style values or any custom attributes with care for key/value updates (avoid bulk replaces)
-- Generate text-diff for textnodes to reduce conflicts and create more minimal changes
 
 ### Installation
 

@@ -425,7 +425,7 @@
 
                         // update the current insertion parameters
                         current['_deleted'] += o[k] + oSpace[k];
-                        current['_length'] = current['_inserted'].length;
+                        current['_length'] = current['_deleted'].length;
                         baseIndex += current['_length'];
                         current['_textEnd'] = baseIndex;
                     }

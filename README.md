@@ -6,7 +6,9 @@ patches and merges of html documents. The strategy is done such that you should 
 to perform two-way or three-way merges depending on the context. Refer to
 Facebook React -
 [Reconciliation](https://facebook.github.io/react/docs/reconciliation.html)
-for a more in depth look at how this algorithm is meant to function.
+for a more in depth look at how this algorithm is meant to function. This implementation will
+also perform whitespace/word based text differences to allow changes to be made to the same text node
+without any conflicts being produced (or atleast minimize conflicts).
 
 ### Features
 
@@ -20,7 +22,8 @@ for a more in depth look at how this algorithm is meant to function.
 - Removing a parent element and a change to a subtree of a parent generates conflicts
 - Manual conflict resolution with theirs/mine ala **reconcile.resolve**
 - Option to show changes inline with **&lt;ins&gt;** and **&lt;del&gt;**
-- text diff implementation based on jsdiff (from John Resig)
+- text diff implementation based on jsdiff (from John Resig) which has been extended to support
+returning changesets and continous deletions/insertion strings.
 
 ### TODO/Issues
 

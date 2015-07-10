@@ -26,6 +26,20 @@ describe('Merge Nodes', function() {
         expect(result[1]['_inserted']).toEqual('world');
     });
 
+    it('should return a text diff of full deletions/insertions', function() {
+        var base = document.createElement('div');
+        base.innerHTML = 'hello to the world';
+        var source = document.createElement('div');
+        source.innerHTML = 'hello universe';
+        var result = reconcile.diff(source, base);
+        expect(!source.isEqualNode(base)).toBeTruthy();
+        expect(result.length).toEqual(2);
+        expect(result[0]['action']).toEqual('deleteText');
+        expect(result[0]['_deleted']).toEqual('to the world');
+        expect(result[1]['action']).toEqual('insertText');
+        expect(result[1]['_inserted']).toEqual('universe');
+    });
+
     it('should return a new child diff', function() {
         var base = document.createElement('div');
         base.innerHTML = 'hello <b>there</b>';

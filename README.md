@@ -15,6 +15,7 @@ without any conflicts being produced (or atleast minimize conflicts).
 - non-destructive diff between two HTML DOM Element Trees
 - diff operations supported:
   - **removeAttribute**, **setAttribute**
+  - **setStyleValue**, **removeStyleValue**
   - **insertText**, **deleteText**
   - **moveChildElement**, **insertChildElement**, **removeChildElement**
 - three-way merging between two diff changesets with automatic conflict resolution
@@ -24,10 +25,8 @@ without any conflicts being produced (or atleast minimize conflicts).
 - Option to show changes inline with **&lt;ins&gt;** and **&lt;del&gt;**
 - text diff implementation based on jsdiff (from John Resig) which has been extended to support
 returning changesets and continous deletions/insertion strings.
-
-### TODO/Issues
-
-- Handle style values or any custom attributes with care for key/value updates (avoid bulk replaces)
+- style value changes for style attribute specific updates. This supports order agnostic
+changes to the style string (stripping away comments and handles inline content values).
 
 ### Installation
 

@@ -26,6 +26,33 @@ describe('Merge Nodes', function() {
         expect(result[1]['_inserted']).toEqual('world');
     });
 
+    it('should return a style diff', function() {
+        var base = document.createElement('div');
+        base.innerHTML = '<div style="font-family: Helvetica; font-weight: bold; font-size: 12px;">hello there</div>';
+        var source = document.createElement('div');
+        source.innerHTML = '<div style="font-family: Helvetica; font-weight: normal;">hello there</div>';
+        var result = reconcile.diff(source, base);
+        expect(!source.isEqualNode(base)).toBeTruthy();
+        expect(result.length).toEqual(2);
+        expect(result[0]['action']).toEqual('setStyleValue');
+        expect(result[0]['name']).toEqual('font-weight');
+        expect(result[0]['_deleted']).toEqual('bold');
+        expect(result[0]['_inserted']).toEqual('normal');
+        expect(result[1]['action']).toEqual('removeStyleValue');
+        expect(result[1]['name']).toEqual('font-size');
+        expect(result[1]['_deleted']).toEqual('12px');
+    });
+
+    it('should return a style diff and not care about order', function() {
+        var base = document.createElement('div');
+        base.innerHTML = '<div style="font-family: Helvetica; font-weight: bold; font-size: 12px;">hello there</div>';
+        var source = document.createElement('div');
+        source.innerHTML = '<div style="font-size: 12px;font-family:Helvetica;font-weight:bold;">hello there</div>';
+        var result = reconcile.diff(source, base);
+        expect(!source.isEqualNode(base)).toBeTruthy();
+        expect(result.length).toEqual(0);
+    });
+
     it('should return a text diff of full deletions/insertions', function() {
         var base = document.createElement('div');
         base.innerHTML = 'hello to the world';
@@ -72,6 +99,26 @@ describe('Merge Nodes', function() {
         expect(result.unapplied).toEqual([]);
         expect(result.conflicts.length).toEqual(0);
         expect(base.innerHTML).toEqual('<b>more content</b> hello <i>austin</i><strong>else</strong>');
+    });
+
+    it('should be able to resolve three way merges with style diffs', function() {
+        var base = document.createElement('div');
+        base.innerHTML = 'hello <b style=\'font-size: 12px;\'>world</b>';
+        var source = document.createElement('div');
+        source.innerHTML = 'hello <b style=\'font-size: 14px;\'>world</b>. And something <strong>else</strong>';
+        var theirs = document.createElement('div');
+        theirs.innerHTML = '<b style=\'font-size: 12px;\'>more content</b> hello <i>austin</i>';
+        var theirMerge = reconcile.diff(theirs, base);
+        var myMerge = reconcile.diff(source, base);
+        var changes = reconcile.patch(theirMerge, myMerge);
+        var result = reconcile.apply(changes, base);
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(1);
+        expect(base.innerHTML).toEqual('<b style=\"font-size: 14px;\">more content</b> hello <strong>else</strong>');
+        result = reconcile.resolve(result.conflicts[0], base, 'theirs');
+        expect(result.unapplied).toEqual([]);
+        expect(result.conflicts.length).toEqual(0);
+        expect(base.innerHTML).toEqual('<b style=\"font-size: 14px;\">more content</b> hello <i>austin</i><strong>else</strong>');
     });
 
     it('should be able to resolve three way conflicts with parent removal - mine', function() {

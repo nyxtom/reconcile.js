@@ -443,6 +443,81 @@
     };
 
     /**
+     * Maps the given style string to a simple key-value object.
+     * @param {string} styleString
+     * @return {Object}
+     */
+    function mapStyleValues(styleString) {
+        // remove comments, find key-value pairs outside of quoted semicolon delimited
+        var attrs = styleString ? styleString.replace(/\/\*.*\*\//g, '').split(/;(?=(?:[^'"]*['"][^'"]*['"])*[^'"]*$)/) : [];
+        var map = {};
+        for (var i = 0; i < attrs.length; i++) {
+            var item = attrs[i].trim();
+            if (!item) {
+                continue;
+            }
+            var index = item.indexOf(':');
+            var name = item.slice(0, index).trim();
+            var value = item.slice(index + 1).trim();
+            if (name.length === 0 || value.length === 0) {
+                continue;
+            }
+            map[name] = value;
+        }
+        return map;
+    }
+
+    /**
+     * Determines the difference between two style strings by generating
+     * a mapped object of key-value styles for source and base. The result
+     * will be a list of actions (setStyleValue or removeStyleValue). The order
+     * of the styles will not matter.
+     *
+     * @param {string} source
+     * @param {string} base
+     * @param {null|undefined|string} index
+     * @param {null|undefined|Node|Element|DocumentFragment} baseElement
+     * @return {Array<Change>}
+     */
+    function diffStyleString(source, base, index, baseElement) {
+        var diffActions = [];
+
+        // map both source and base style strings to determine
+        // whether a change was made or a new style value exists
+        var sourceMap = mapStyleValues(source);
+        var baseMap = mapStyleValues(base);
+        for (var k in sourceMap) {
+            var sourceVal = sourceMap[k];
+            var baseVal = baseMap[k];
+            if (sourceVal != baseVal) {
+                diffActions.push({
+                    'action': 'setStyleValue',
+                    'name': k,
+                    'element': baseElement,
+                    'baseIndex': index,
+                    'sourceIndex': index,
+                    '_deleted': baseVal,
+                    '_inserted': sourceVal });
+            }
+        }
+
+        // remove style values which were unset in the source string
+        for (var k in baseMap) {
+            if (sourceMap[k] == null) {
+                diffActions.push({
+                    'action': 'removeStyleValue',
+                    'name': k,
+                    'element': baseElement,
+                    'baseIndex': index,
+                    'sourceIndex': index,
+                    '_deleted': baseMap[k] });
+            }
+        }
+
+        return diffActions;
+    };
+
+    /**
      * Merges two given nodes by checking their content
      * node type, attribute differences and finally their
      * child nodes through various diff operations. This
@@ -462,10 +537,7 @@
         if (source.nodeType === base.nodeType && (source.nodeType === 3 || source.nodeType === 8)) {
             if (base.nodeValue !== source.nodeValue) {
                 var textActions = diffString(source.nodeValue, base.nodeValue, index, base);
-                if (textActions) {
-                    for (var i = 0; i < textActions.length; i++) {
-                        textActions[i]['element'] = base;
-                    }
+                if (textActions.length > 0) {
                     diffActions = diffActions.concat(textActions);
                 }
             }
@@ -495,14 +567,23 @@
                             'sourceIndex': index,
                             '_inserted': value });
                     } else {
-                        diffActions.push({
-                            'action': 'setAttribute',
-                            'name': name,
-                            'element': base,
-                            'baseIndex': index,
-                            'sourceIndex': index,
-                            '_deleted': val,
-                            '_inserted': value });
+                        // if the attribute happens to be a style
+                        // only generate style Updates
+                        if (name === 'style') {
+                            var styleChanges = diffStyleString(value, val, index, base);
+                            if (styleChanges.length > 0) {
+                                diffActions = diffActions.concat(styleChanges);
+                            }
+                        } else {
+                            diffActions.push({
+                                'action': 'setAttribute',
+                                'name': name,
+                                'element': base,
+                                'baseIndex': index,
+                                'sourceIndex': index,
+                                '_deleted': val,
+                                '_inserted': value });
+                        }
                     }
                 }
             }
@@ -648,6 +729,12 @@
                             if (isOverlappingRanges(theirItem, myItem)) {
                                 conflicted = true;
                             }
+                        } else if (theirItem['action'].indexOf('StyleValue') > 0 && myItem['action'].indexOf('StyleValue') > 0) {
+                            if (theirItem['name'] === myItem['name']) {
+                                conflicted = true;
+                            }
+                        } else if (theirItem['action'].indexOf('StyleValue') > 0 || myItem['action'].indexOf('StyleValue') > 0) {
+                            conflicted = false;
                         } else {
                             conflicted = true;
                         }
@@ -814,6 +901,7 @@
         var removals = [];
         var conflictChanges = [];
         var textChanges = {};
+        var styleChanges = {};
         for (var c = 0, cLen = changes.length; c < cLen; c++) {
             var change = changes[c];
             var action = change['action'];
@@ -923,7 +1011,7 @@
                     });
                 }
                 removals.push([node.parentNode, node]);
-            } else if (action === 'deleteText' || action === 'insertText') {
+            } else if (action === 'deleteText' || action === 'insertText' || action === 'setStyleValue' || action === 'removeStyleValue') {
                 // all text changes need to be grouped into a
                 // single action, this helps us apply a single set of
                 // operations to the same text node without too much trouble
@@ -937,7 +1025,11 @@
                 }
 
                 existingOp['changes'].push(change);
-                textChanges[change['baseIndex']] = existingOp;
+                if (action === 'insertText' || action === 'deleteText') {
+                    textChanges[change['baseIndex']] = existingOp;
+                } else {
+                    styleChanges[change['baseIndex']] = existingOp;
+                }
             } else if (action === 'replaceText') {
                 if (!showChanges) {
                     node.nodeValue = change['_inserted'];
@@ -1044,6 +1136,37 @@
             }
         }
 
+        // execute all style changes
+        for (var b in styleChanges) {
+            var nodeChanges = styleChanges[b];
+            var node = nodeChanges['source'];
+            var nodeOps = nodeChanges['changes'];
+
+            // generate a map and perform the operations
+            var styleMap = mapStyleValues(node.getAttribute('style'));
+            for (var i = 0; i < nodeOps.length; i++) {
+                var op = nodeOps[i];
+                if (op['action'] === 'setStyleValue') {
+                    styleMap[op['name']] = op['_inserted'];
+                } else {
+                    delete styleMap[op['name']];
+                }
+            }
+
+            // generate the style string result
+            var str = [];
+            for (var k in styleMap) {
+                str.push(k + ': ' + styleMap[k]);
+            }
+
+            // perform the single update to invalidate css styles
+            if (str.length > 0) {
+                node.setAttribute('style', str.join(';') + (str.length === 1 ? ';' : ''));
+            } else {
+                node.removeAttribute('style');
+            }
+        }
+
         // loop through the conflicts and group them by theirs/mine
         var conflicts = [];
         while (conflictChanges.length > 0) {
@@ -1093,6 +1216,7 @@
 
     exports.diff = diff;
     exports.diffString = diffString;
+    exports.diffStyleString = diffStyleString;
     exports.patch = patch;
     exports.apply = apply;
     exports.resolve = resolve;

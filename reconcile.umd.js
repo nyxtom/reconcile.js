@@ -161,7 +161,7 @@
                 id = node.id ? node.id : generateId(node, tags);
 
             // skip if force no change
-            if (node.attributes && node.getAttribute('assume-no-change')===''){
+            if (node.attributes && node.hasAttribute('assume-no-change')){
                 continue;
             }
 
@@ -206,7 +206,7 @@
         for (var i = 0, len = base.childNodes.length; i < len; i++) {
             var remove = base.childNodes[i];
             var removeId = remove._id;
-            if (base.childNodes[i].attributes && base.childNodes[i].getAttribute('assume-no-change')===''){
+            if (base.childNodes[i].attributes && base.childNodes[i].hasAttribute('assume-no-change')){
                 continue;
             }
             if (!operateMap[removeId]) {

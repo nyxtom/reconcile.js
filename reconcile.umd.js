@@ -160,6 +160,11 @@
                 bound = base.childNodes[reverse ? base.childNodes.length - indices[i] - 1 : indices[i]],
                 id = node.id ? node.id : generateId(node, tags);
 
+            // skip if force no change
+            if (node.attributes && node.hasAttribute('assume-no-change')){
+                continue;
+            }
+
             // skip if we already performed an insertion map
             if (operateMap[id]) {
                 continue;
@@ -201,6 +206,9 @@
         for (var i = 0, len = base.childNodes.length; i < len; i++) {
             var remove = base.childNodes[i];
             var removeId = remove._id;
+            if (base.childNodes[i].attributes && base.childNodes[i].hasAttribute('assume-no-change')){
+                continue;
+            }
             if (!operateMap[removeId]) {
                 moves.push({
                     'action': 'removeChildElement',
